@@ -32,6 +32,20 @@ export async function ensureSchema() {
     );
   `);
 
+  // ====================== SERVER ROLES ======================
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS server_roles (
+      id TEXT PRIMARY KEY,
+      server_id TEXT NOT NULL REFERENCES servers(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      color TEXT,
+      position INT NOT NULL DEFAULT 0,
+      permissions JSONB NOT NULL DEFAULT '{}'::jsonb,
+      is_managed BOOLEAN NOT NULL DEFAULT false,
+      created_at BIGINT NOT NULL
+    );
+  `);
+
   // ====================== ПРОФИЛИ И ПРИСУТСТВИЕ ======================
   await pool.query(`
     CREATE TABLE IF NOT EXISTS user_profiles (
