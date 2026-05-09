@@ -1,0 +1,67 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER:-lunarus}
+      POSTGRES_DB: ${POSTGRES_DB:-lunarus}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+
+  livekit:
+    image: livekit/livekit-server:latest
+    command: ["--config", "/etc/livekit.yaml"]
+    volumes:
+      - ./infra/livekit.yaml:/etc/livekit.yaml:ro
+    ports:
+      - "7880:7880"       # HTTP / WS
+      - "7881:7881"       # optional TCP (depends on config)
+      - "61000-61999:61000-61999/udp"
+    restart: unless-stopped
+
+  coturn:
+    image: coturn/coturn:latest
+    network_mode: "host"
+    volumes:
+      - ./infra/turnserver.conf:/etc/coturn/turnserver.conf:ro
+    command: ["-c", "/etc/coturn/turnserver.conf"]
+    restart: unless-stopped
+
+  server:
+    build:
+      context: ./server
+    env_file:
+      - ./server/.env
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      - postgres
+      - redis
+      - livekit
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./infra:/etc/caddy
+      - ./infra/app:/srv/app:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - server
+      - livekit
+
+volumes:
+  caddy_data:
+  caddy_config:
+  pgdata:

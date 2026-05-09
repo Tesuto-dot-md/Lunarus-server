@@ -1,0 +1,22 @@
+# Минимальный конфиг LiveKit для MVP.
+# Для продакшена обязательно:
+# - домен + TLS
+# - корректный public IP / node_ip
+# - STUN/TURN (ниже можно указать turn)
+port: 7880
+rtc:
+  tcp_port: 7881
+  port_range_start: 61000
+  port_range_end: 61999
+
+# API keys для выдачи токенов (backend должен знать key/secret)
+keys:
+  devkey: "a72fd0b3d3d5bb331e0154b34818a8fc8d2282bab51c2dc58c9a7a9502824ef7"
+
+# TURN можно подключить так (после настройки coturn):
+# turn:
+#   enabled: true
+#   domain: "your.domain"
+#   tls_port: 5349
+#   udp_port: 3478
+#   external_tls: false

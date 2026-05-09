@@ -1,0 +1,55 @@
+{
+	email admin@lunarus.ru
+}
+
+api.lunarus.ru {
+
+  encode zstd gzip
+
+  # WebSocket gateway
+  reverse_proxy /gateway server:8080
+
+  # REST API
+  reverse_proxy /auth/* server:8080
+
+  reverse_proxy /users* server:8080
+  reverse_proxy /servers* server:8080
+  reverse_proxy /invites* server:8080
+
+  # Legacy path kept for compatibility with older clients
+  reverse_proxy /guilds* server:8080
+
+  # Servers (guilds) + related endpoints
+  reverse_proxy /servers* server:8080
+  reverse_proxy /invites* server:8080
+
+  # Channels + messages
+  reverse_proxy /channels* server:8080
+  reverse_proxy /voice/* server:8080
+  reverse_proxy /upload* server:8080
+  reverse_proxy /uploads* server:8080
+  reverse_proxy /tenor/* server:8080
+
+  # LiveKit
+  reverse_proxy /rtc* livekit:7880
+  reverse_proxy /twirp* livekit:7880
+}
+
+lunarus.ru, www.lunarus.ru {
+
+  encode zstd gzip
+
+  # Canonicalize the SPA base path.
+  redir /app /app/ 308
+
+  # Serve the Flutter web build from /app.
+  handle_path /app/* {
+    root * /srv/app
+    try_files {path} /index.html
+    file_server
+  }
+}
+
+app.lunarus.ru {
+  redir https://lunarus.ru/app{uri} 308
+}
