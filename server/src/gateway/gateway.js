@@ -1,5 +1,5 @@
 import { WebSocketServer } from 'ws';
-import { verifyJwt } from './auth/core.js';
+import { verifyJwt } from '../auth/core.js';
 
 export const GATEWAY_PATH = '/gateway';
 

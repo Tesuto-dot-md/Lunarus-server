@@ -1,7 +1,7 @@
 import cors from 'cors';
 import {
   PUBLIC_BASE_URL,
-} from './config.js';
+} from '../common/config.js';
 
 const CORS_ORIGINS = (process.env.CORS_ORIGINS || 'https://app.lunarus.ru,https://lunarus.ru,http://localhost:3000,http://localhost:5173')
   .split(',')
