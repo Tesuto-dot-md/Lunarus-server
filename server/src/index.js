@@ -113,6 +113,7 @@ app.use(createMeRouter({
   },
   accounts,
   profiles,
+  presence,
   avatarUpload,
   UPLOAD_DIR,
   ensureDirSync,
