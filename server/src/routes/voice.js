@@ -5,7 +5,7 @@ import {
   LIVEKIT_API_SECRET,
   LIVEKIT_HTTP_URL,
   PUBLIC_BASE_URL,
-} from '../config.js';
+} from '../common/config.js';
 
 const roomService = new RoomServiceClient(LIVEKIT_HTTP_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET);
 
