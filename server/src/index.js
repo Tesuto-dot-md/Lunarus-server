@@ -1,4 +1,4 @@
-import 'express-async-errors';
+//import 'express-async-errors';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import { createServer } from 'http';
