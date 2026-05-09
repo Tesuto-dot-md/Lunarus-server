@@ -18,6 +18,9 @@ import {
 import { createProfilesService } from './accounts/profile/service.js';
 const profiles = createProfilesService({ pool });
 
+import { createPresenceService } from './presence/service.js';
+const presence = createPresenceService({ pool });
+
 import { genId, genInviteCode, sha256Hex } from './common/ids.js';
 import {
   AVATAR_SUBDIR,
