@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 import { randomToken } from './auth/core.js';
-import { SMTP_FROM, SMTP_HOST, SMTP_PASS, SMTP_PORT, SMTP_SECURE, SMTP_USER } from './config.js';
-import { sha256Hex } from './ids.js';
+import { SMTP_FROM, SMTP_HOST, SMTP_PASS, SMTP_PORT, SMTP_SECURE, SMTP_USER } from './common/config.js';
+import { sha256Hex } from './common/ids.js';
 
 export function createEmailService({ pool }) {
   const mailer = SMTP_HOST

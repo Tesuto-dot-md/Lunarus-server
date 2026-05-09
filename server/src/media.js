@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import sharp from 'sharp';
-import { PUBLIC_BASE_URL } from './config.js';
+import { PUBLIC_BASE_URL } from './common/config.js';
 
 export const UPLOAD_DIR = process.env.UPLOAD_DIR
   ? path.resolve(process.env.UPLOAD_DIR)
