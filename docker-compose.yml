@@ -9,9 +9,9 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lunarus}"]
-      interval: 5s
-      timeout: 5s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lunarus} -d ${POSTGRES_DB:-lunarus}"]
+      interval: 3s
+      timeout: 3s
       retries: 5
 
   redis:
