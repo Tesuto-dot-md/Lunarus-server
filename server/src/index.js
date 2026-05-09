@@ -15,6 +15,9 @@ import {
   getPublicBaseUrl,
 } from './http/http.js';
 
+import { createProfilesService } from './accounts/profile/service.js';
+const profiles = createProfilesService({ pool });
+
 import { genId, genInviteCode, sha256Hex } from './common/ids.js';
 import {
   AVATAR_SUBDIR,
@@ -106,6 +109,7 @@ app.use(createMeRouter({
     }
   },
   accounts,
+  profiles,
   avatarUpload,
   UPLOAD_DIR,
   ensureDirSync,
