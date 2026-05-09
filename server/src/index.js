@@ -1,4 +1,4 @@
-//import 'express-async-errors';
+import 'express-async-errors';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import { createServer } from 'http';
@@ -28,8 +28,14 @@ import {
 } from './media.js';
 
 import { createPermissions } from './permissions.js';
-
 import { createAccountsService } from './accounts/core/service.js';
+import { createAuthRouter } from './routes/auth.js';
+import { createMeRouter } from './routes/me.js';
+import { createMessagesRouter } from './routes/messages.js';
+import { createServersRouter } from './routes/servers.js';
+import { createUsersRouter } from './routes/users.js';
+import { createVoiceRouter } from './routes/voice.js';
+import { ensureSchema } from './common/schema.js';
 
 const app = express();
 app.set('trust proxy', true);
@@ -38,12 +44,19 @@ const httpServer = createServer(app);
 const corsOptions = createCorsOptions();
 const permissions = createPermissions({ pool });
 const emailService = createEmailService({ pool });
-
 const accounts = createAccountsService();
 
-let gateway;
+let gateway = createGateway({
+  server: httpServer,
+  pool,
+  permissions,
+  getPublicUserProfile: async (userId) => {
+    const base = await accounts.getUserDtoById(String(userId));
+    if (!base) return null;
+    return base;
+  },
+});
 
-// ====================== РОУТЕРЫ ======================
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 app.use(cookieParser());
@@ -60,37 +73,98 @@ app.use(applyApiErrorEnvelope());
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
 // Auth
-app.use(
-  createAuthRouter({
-    pool,
-    normalizeEmail: require('./common/validation.js').normalizeEmail,
-    isValidEmail: require('./common/validation.js').isValidEmail,
-    isValidUsername: require('./common/validation.js').isValidUsername,
-    isValidPassword: require('./common/validation.js').isValidPassword,
-    setRefreshCookie: () => {},
-    clearRefreshCookie: () => {},
-    getPublicBaseUrl,
-    sendEmail: emailService.sendEmail,
-    createEmailToken: emailService.createEmailToken,
-    consumeEmailToken: emailService.consumeEmailToken,
-    htmlPage: emailService.htmlPage,
-    genId,
-    sha256Hex,
-    accounts,
-  })
-);
+app.use(createAuthRouter({
+  pool,
+  accounts,
+  normalizeEmail: (email) => String(email || '').trim().toLowerCase(),
+  isValidEmail: (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '')),
+  isValidUsername: (username) => String(username || '').trim().length >= 3,
+  isValidPassword: (password) => String(password || '').length >= 8,
+  setRefreshCookie: () => {},
+  clearRefreshCookie: () => {},
+  getPublicBaseUrl,
+  sendEmail: emailService.sendEmail,
+  createEmailToken: emailService.createEmailToken,
+  consumeEmailToken: emailService.consumeEmailToken,
+  htmlPage: emailService.htmlPage,
+  genId,
+  sha256Hex,
+}));
 
-// Me и Users
-app.use(require('./routes/me.js').createMeRouter({ pool, authMiddleware: () => {}, accounts }));
-app.use(require('./routes/users.js').createUsersRouter({ pool, authMiddleware: () => {}, accounts }));
+// Me
+app.use(createMeRouter({
+  pool,
+  authMiddleware: (req, res, next) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) return res.status(401).json({ error: 'unauthorized' });
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev');
+      req.user = decoded;
+      next();
+    } catch {
+      res.status(401).json({ error: 'unauthorized' });
+    }
+  },
+  accounts,
+  avatarUpload,
+  UPLOAD_DIR,
+  ensureDirSync,
+  safeUnlinkIfLocal,
+  normalizeEmail: (email) => String(email || '').trim().toLowerCase(),
+  isValidEmail: (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '')),
+  isValidUsername: (username) => String(username || '').trim().length >= 3,
+  hashPassword: async (p) => p,
+  verifyPassword: async (h, p) => h === p,
+  isValidPassword: (p) => String(p || '').length >= 8,
+}));
 
-app.use(require('./routes/servers.js').createServersRouter({ pool, authMiddleware: () => {}, permissions, withTransaction: async (fn) => fn(pool), genId, genInviteCode }));
-app.use(require('./routes/messages.js').createMessagesRouter({ pool, authMiddleware: () => {}, permissions, mediaUpload, finalizeMediaUpload, broadcast: () => {} }));
-app.use(require('./routes/voice.js').createVoiceRouter({ authMiddleware: () => {}, getPublicBaseUrl }));
+// Users (legacy)
+app.use(createUsersRouter({
+  pool,
+  authMiddleware: (req, res, next) => next(),
+  getPublicUserProfile: async (id) => accounts.getUserDtoById(String(id)),
+  isUserOnline: () => false,
+  avatarUpload,
+  mimeToExt: () => 'webp',
+  UPLOAD_DIR,
+  AVATAR_SUBDIR: 'avatars',
+  ensureDirSync,
+  safeUnlinkIfLocal,
+  hashPassword: async (p) => p,
+  verifyPassword: async (h, p) => h === p,
+  isValidPassword: (p) => String(p || '').length >= 8,
+  clampStr: (s, l) => String(s || '').slice(0, l),
+  isValidAvatarUrl: () => true,
+}));
+
+// Servers
+app.use(createServersRouter({
+  pool,
+  authMiddleware: (req, res, next) => next(),
+  permissions,
+  withTransaction: async (fn) => fn(pool),
+  genId,
+  genInviteCode,
+}));
+
+// Messages
+app.use(createMessagesRouter({
+  pool,
+  authMiddleware: (req, res, next) => next(),
+  permissions,
+  mediaUpload,
+  finalizeMediaUpload,
+  broadcast: () => {},
+}));
+
+// Voice
+app.use(createVoiceRouter({
+  authMiddleware: (req, res, next) => next(),
+  getPublicBaseUrl,
+}));
 
 app.use(createErrorHandler());
 
-// ====================== ЗАПУСК ======================
 ensureSchema()
   .then(() => {
     httpServer.listen(PORT, () => {
@@ -99,6 +173,6 @@ ensureSchema()
     });
   })
   .catch((e) => {
-    console.error('[FATAL] Ошибка инициализации схемы', e);
+    console.error('[FATAL] failed to init schema', e);
     process.exit(1);
   });
